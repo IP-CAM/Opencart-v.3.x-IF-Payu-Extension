@@ -147,7 +147,7 @@ class ControllerExtensionPaymentIfPayu extends Controller
         }
 
         $data = [
-            'module'      => urlencode($this->config->get('payment_if_payu_payment_method')),
+            'module'      => 'PAYUCOMTR',
             'method'      => $paymentMethod,
             'license_key' => urlencode($this->config->get('payment_if_payu_license_key')),
             'ok_url'      => urlencode($this->url->link('extension/payment/if_payu/callback', ['status' => 'ok'], true)),
@@ -308,7 +308,7 @@ class ControllerExtensionPaymentIfPayu extends Controller
     private function validate_transaction($paymentMethod, $id, $hash)
     {
         return $this->curl_request('VALIDATE', [
-            'module'           => urlencode($this->config->get('payment_if_payu_payment_method')),
+            'module'           => 'PAYUCOMTR',
             'method'           => $paymentMethod,
             'license_key'      => urlencode($this->config->get('payment_if_payu_license_key')),
             'test'             => ( ! ! $this->config->get('payment_if_payu_test')),
