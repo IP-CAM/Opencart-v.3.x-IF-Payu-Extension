@@ -75,13 +75,7 @@ class ControllerExtensionPaymentIfPayu extends Controller
 
         }
 
-        $request = 'payment_method=' . urlencode($this->config->get('payment_if_payu_payment_method'));
-        $request .= '&license_key=' . urlencode($this->config->get('payment_if_payu_license_key'));
-        $request .= '&ok_url=' . urlencode($this->url->link('extension/payment/if_payu/callback', ['status' => 'ok'], true));
-        $request .= '&fail_url=' . urlencode($this->url->link('extension/payment/if_payu/callback', ['status' => 'fail'], true));
-        $request .= '&test=' . ( ! ! $this->config->get('payment_if_payu_test'));
-
-        $data = [
+        $moduleData = [
 
             'order_id'        => (int)$order_info['order_id'],
             'secret_key'      => urlencode($this->config->get('payment_if_payu_secret_key')),
@@ -111,7 +105,7 @@ class ControllerExtensionPaymentIfPayu extends Controller
 
             case 'CREDIT_CARD':
 
-                $data = array_merge($data, [
+                $moduleData = array_merge($moduleData, [
                     'card_number'  => urlencode(str_replace(' ', '', $this->request->post['cc_number'])),
                     'expire_month' => urlencode($this->request->post['cc_expire_date_month']),
                     'expire_year'  => urlencode($this->request->post['cc_expire_date_year']),
@@ -124,7 +118,7 @@ class ControllerExtensionPaymentIfPayu extends Controller
 
         if ($this->cart->hasShipping()) {
 
-            $data = array_merge($data, [
+            $moduleData = array_merge($moduleData, [
                 'shipping_first_name'   => urlencode($order_info['shipping_firstname']),
                 'shipping_last_name'    => urlencode($order_info['shipping_lastname']),
                 'shipping_company_name' => urlencode($order_info['shipping_company']),
@@ -138,7 +132,7 @@ class ControllerExtensionPaymentIfPayu extends Controller
 
         } else {
 
-            $data = array_merge($data, [
+            $moduleData = array_merge($moduleData, [
                 'shipping_first_name'   => urlencode($order_info['payment_firstname']),
                 'shipping_last_name'    => urlencode($order_info['payment_lastname']),
                 'shipping_company_name' => urlencode($order_info['payment_company']),
@@ -152,74 +146,97 @@ class ControllerExtensionPaymentIfPayu extends Controller
 
         }
 
-        $request .= '&data=' . json_encode($data);
+        $data = [
+            'module'      => urlencode($this->config->get('payment_if_payu_payment_method')),
+            'method'      => $paymentMethod,
+            'license_key' => urlencode($this->config->get('payment_if_payu_license_key')),
+            'ok_url'      => urlencode($this->url->link('extension/payment/if_payu/callback', ['status' => 'ok'], true)),
+            'fail_url'    => urlencode($this->url->link('extension/payment/if_payu/callback', ['status' => 'fail'], true)),
+            'test'        => ( ! ! $this->config->get('payment_if_payu_test')),
+            'data'        => $moduleData
+        ];
 
-        $curl = curl_init('https://backend.ifyazilim.com/virtualpos/start');
+        $responseObject = $this->curl_request('INIT', $data);
 
-        curl_setopt($curl, CURLOPT_PORT, 443);
-        curl_setopt($curl, CURLOPT_HEADER, 0);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($curl, CURLOPT_FORBID_REUSE, 1);
-        curl_setopt($curl, CURLOPT_FRESH_CONNECT, 1);
-        curl_setopt($curl, CURLOPT_POST, 1);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $request);
-
-        $response = curl_exec($curl);
-
-        curl_close($curl);
-
-        if ( ! $response) {
-            $this->log->write('IfPayuPayment failed: ' . curl_error($curl) . '(' . curl_errno($curl) . ')');
-        }
-
-        $responseObject = json_decode($response);
-
-        if ($responseObject->success) {
-
-            switch ($responseObject->type) {
-
-                case 'response':
-
-                    // @todo check order status from backend
-                    // $transactionId = $responseObject->transaction_id;
-                    // $transactionHash = $responseObject->transaction_hash;
-
-                    $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get('payment_if_payu_order_status_id'));
-
-                    $this->response->addHeader('Content-Type: application/json');
-                    $this->response->setOutput(json_encode([
-                        'redirect' => $this->url->link('checkout/success', '', true)
-                    ]));
-
-                    break;
-
-                case 'redirect':
-
-                    $this->response->addHeader('Content-Type: application/json');
-                    $this->response->setOutput(json_encode([
-                        'redirect' => $responseObject->url
-                    ]));
-
-                    break;
-
-                default:
-
-                    $this->response->addHeader('Content-Type: application/json');
-                    $this->response->setOutput(json_encode([
-                        'error' => 'Bilinmeyen bir hata meydana geldi.'
-                    ]));
-
-                    break;
-
-            }
-
-        } else {
+        if ($responseObject === false) {
 
             $this->response->addHeader('Content-Type: application/json');
             $this->response->setOutput(json_encode([
-                'error' => $responseObject->message
+                'error' => 'Bilinmeyen bir hata meydana geldi.'
             ]));
+
+        } else {
+
+            if ($responseObject->success) {
+
+                switch ($responseObject->type) {
+
+                    case 'response':
+
+                        $transactionId = $responseObject->transaction_id;
+                        $transactionHash = $responseObject->transaction_hash;
+
+                        $validate_response = $this->validate_transaction($paymentMethod, $transactionId, $transactionHash);
+
+                        if ($validate_response === false) {
+
+                            $this->response->addHeader('Content-Type: application/json');
+                            $this->response->setOutput(json_encode([
+                                'error' => 'Bilinmeyen bir hata meydana geldi.'
+                            ]));
+
+                        } else {
+
+                            if ($validate_response->success) {
+
+                                $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get('payment_if_payu_order_status_id'));
+
+                                $this->response->addHeader('Content-Type: application/json');
+                                $this->response->setOutput(json_encode([
+                                    'redirect' => $this->url->link('checkout/success', '', true)
+                                ]));
+
+                            } else {
+
+                                $this->response->addHeader('Content-Type: application/json');
+                                $this->response->setOutput(json_encode([
+                                    'error' => $validate_response->message ?? 'Bilinmeyen bir hata meydana geldi.'
+                                ]));
+
+                            }
+
+                        }
+
+                        break;
+
+                    case 'redirect':
+
+                        $this->response->addHeader('Content-Type: application/json');
+                        $this->response->setOutput(json_encode([
+                            'redirect' => $responseObject->url
+                        ]));
+
+                        break;
+
+                    default:
+
+                        $this->response->addHeader('Content-Type: application/json');
+                        $this->response->setOutput(json_encode([
+                            'error' => 'Bilinmeyen bir hata meydana geldi.'
+                        ]));
+
+                        break;
+
+                }
+
+            } else {
+
+                $this->response->addHeader('Content-Type: application/json');
+                $this->response->setOutput(json_encode([
+                    'error' => $responseObject->message
+                ]));
+
+            }
 
         }
     }
@@ -234,13 +251,38 @@ class ControllerExtensionPaymentIfPayu extends Controller
 
             case 'ok':
 
+                $transactionId = $this->request->post['transaction_id'];
+                $transactionHash = $this->request->post['transaction_hash'];
+
                 // @todo check order status from backend
                 // $transactionId = $this->request->post['transaction_id'];
                 // $transactionHash = $this->request->post['transaction_hash'];
 
-                $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get('payment_if_payu_order_status_id'));
+                $validate_response = $this->validate_transaction($this->config->get('payment_if_payu_payment_method'), $transactionId, $transactionHash);
 
-                $this->response->redirect($this->url->link('checkout/success', '', true));
+                if ($validate_response === false) {
+
+                    $this->session->data['error'] = 'Bilinmeyen bir hata meydana geldi.';
+
+                    $this->response->redirect($this->url->link('checkout/checkout', '', true));
+
+                } else {
+
+                    if ($validate_response->success) {
+
+                        $this->model_checkout_order->addOrderHistory($this->session->data['order_id'], $this->config->get('payment_if_payu_order_status_id'));
+
+                        $this->response->redirect($this->url->link('checkout/success', '', true));
+
+                    } else {
+
+                        $this->session->data['error'] = isset($validate_response->message) ? $validate_response->message : 'Bilinmeyen bir hata meydana geldi.';
+
+                        $this->response->redirect($this->url->link('checkout/checkout', '', true));
+
+                    }
+
+                }
 
                 break;
 
@@ -261,5 +303,48 @@ class ControllerExtensionPaymentIfPayu extends Controller
                 break;
 
         }
+    }
+
+    private function validate_transaction($paymentMethod, $id, $hash)
+    {
+        return $this->curl_request('VALIDATE', [
+            'module'           => urlencode($this->config->get('payment_if_payu_payment_method')),
+            'method'           => $paymentMethod,
+            'license_key'      => urlencode($this->config->get('payment_if_payu_license_key')),
+            'test'             => ( ! ! $this->config->get('payment_if_payu_test')),
+            'transaction_id'   => $id,
+            'transaction_hash' => $hash
+        ]);
+    }
+
+    private function curl_request($action, $data)
+    {
+        $curl = curl_init('https://backend.ifyazilim.com/payment/process');
+
+        curl_setopt($curl, CURLOPT_PORT, 443);
+        curl_setopt($curl, CURLOPT_HEADER, 0);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($curl, CURLOPT_FORBID_REUSE, 1);
+        curl_setopt($curl, CURLOPT_FRESH_CONNECT, 1);
+        curl_setopt($curl, CURLOPT_POST, 1);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, implode('&', [
+            'action=' . $action,
+            'data=' . json_encode($data)
+        ]));
+
+        $response = curl_exec($curl);
+
+        curl_close($curl);
+
+        if ( ! $response) {
+
+            $this->log->write('IfPayuPayment failed: ' . curl_error($curl) . '(' . curl_errno($curl) . ')');
+
+            return false;
+
+        }
+
+        return json_decode($response);
     }
 }

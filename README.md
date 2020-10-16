@@ -30,4 +30,4 @@ This is a payu.com.tr payment extension for Opencart PHP E-Commerce System
  
 #### Note
 
-Please write us for a license key (bilgi@ifyazilim.com).
+Please write us for a license key (bilgi@ifyazilim.com)
