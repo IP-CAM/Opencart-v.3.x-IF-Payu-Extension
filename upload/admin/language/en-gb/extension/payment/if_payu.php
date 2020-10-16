@@ -10,7 +10,7 @@ $_['text_if_payu'] = '<a href="https://www.ifyazilim.com" target="_blank"><img s
 
 // Entry
 $_['entry_payment_method'] = 'Payment Medhod';
-$_['entry_license_key'] = 'License Key';
+$_['entry_licence_key'] = 'License Key';
 $_['entry_secret_key'] = 'Secret Key';
 $_['entry_test'] = 'Test Mode';
 $_['entry_total'] = 'Total';
@@ -27,5 +27,5 @@ $_['help_total'] = 'The checkout total the order must reach before this payment 
 // Error
 $_['error_permission'] = 'Warning: You do not have permission to modify payment IF Payu!';
 $_['error_payment_method'] = 'Payment Method Required!';
-$_['error_license_key'] = 'Lincese Key Required!';
+$_['error_licence_key'] = 'Lincese Key Required!';
 $_['error_secret_key'] = 'Secret Key Required!';

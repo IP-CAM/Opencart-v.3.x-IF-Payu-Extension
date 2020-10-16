@@ -32,10 +32,10 @@ class ControllerExtensionPaymentIfPayu extends Controller
             $data['error_payment_method'] = '';
         }
 
-        if (isset($this->error['license_key'])) {
-            $data['error_license_key'] = $this->error['license_key'];
+        if (isset($this->error['licence_key'])) {
+            $data['error_licence_key'] = $this->error['licence_key'];
         } else {
-            $data['error_license_key'] = '';
+            $data['error_licence_key'] = '';
         }
 
         if (isset($this->error['secret_key'])) {
@@ -71,10 +71,10 @@ class ControllerExtensionPaymentIfPayu extends Controller
             $data['payment_if_payu_payment_method'] = $this->config->get('payment_if_payu_payment_method');
         }
 
-        if (isset($this->request->post['payment_if_payu_license_key'])) {
-            $data['payment_if_payu_license_key'] = $this->request->post['payment_if_payu_license_key'];
+        if (isset($this->request->post['payment_if_payu_licence_key'])) {
+            $data['payment_if_payu_licence_key'] = $this->request->post['payment_if_payu_licence_key'];
         } else {
-            $data['payment_if_payu_license_key'] = $this->config->get('payment_if_payu_license_key');
+            $data['payment_if_payu_licence_key'] = $this->config->get('payment_if_payu_licence_key');
         }
 
         if (isset($this->request->post['payment_if_payu_secret_key'])) {
@@ -150,8 +150,8 @@ class ControllerExtensionPaymentIfPayu extends Controller
             $this->error['payment_method'] = $this->language->get('error_payment_method');
         }
 
-        if ( ! $this->request->post['payment_if_payu_license_key']) {
-            $this->error['license_key'] = $this->language->get('error_license_key');
+        if ( ! $this->request->post['payment_if_payu_licence_key']) {
+            $this->error['licence_key'] = $this->language->get('error_licence_key');
         }
 
         if ( ! $this->request->post['payment_if_payu_secret_key']) {

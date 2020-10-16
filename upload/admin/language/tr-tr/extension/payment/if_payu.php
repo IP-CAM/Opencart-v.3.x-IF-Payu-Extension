@@ -10,7 +10,7 @@ $_['text_if_payu'] = '<a href="https://www.ifyazilim.com" target="_blank"><img s
 
 // Entry
 $_['entry_payment_method'] = 'Ödeme Methodu';
-$_['entry_license_key'] = 'Lisans Anahtarı';
+$_['entry_licence_key'] = 'Lisans Anahtarı';
 $_['entry_secret_key'] = 'Şifreleme Anahtarı';
 $_['entry_test'] = 'Test Modu';
 $_['entry_total'] = 'Toplam Sipariş Tutarı';
@@ -27,5 +27,5 @@ $_['help_total'] = 'Toplam sipariş miktarına göre ödeme yönteminin aktif ol
 // Error
 $_['error_permission'] = 'Uyarı: IF Payu eklentisine ait ayarları değiştirme yetkiniz bulunmuyor!';
 $_['error_payment_method'] = 'Ödeme Yöntemi Zorunlu!';
-$_['error_license_key'] = 'Lisans Anahtarı Zorunlu!';
+$_['error_licence_key'] = 'Lisans Anahtarı Zorunlu!';
 $_['error_secret_key'] = 'Şifreleme Anahtarı Zorunlu!';
